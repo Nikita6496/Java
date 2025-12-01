@@ -1,21 +1,24 @@
 import java.awt.Rectangle;
 import java.util.ArrayList;
+import java.util.List;
 
 public class GameEngine {
-    ArrayList<Rectangle> obstacles = new ArrayList<>();
-    Rectangle winZone;
+    private List<Rectangle> obstacles = new ArrayList<>();
+    private Rectangle winZone;
 
     public GameEngine() {
-        //Границы
+        initializeObstacles();
+        initializeWinZone();
+    }
+
+    private void initializeObstacles() {
+        // Границы
         obstacles.add(new Rectangle(60,90,30,360));
-
         obstacles.add(new Rectangle(90,30,870,30));
-
         obstacles.add(new Rectangle(90,450,870,30));
-
         obstacles.add(new Rectangle(960,60,30,390));
 
-        //Барьеры
+        // Барьеры
         obstacles.add(new Rectangle(120,60,30,60));
         obstacles.add(new Rectangle(90,210,60,30));
         obstacles.add(new Rectangle(120,240,30,60));
@@ -65,19 +68,28 @@ public class GameEngine {
         obstacles.add(new Rectangle(420,120,30,60));
         obstacles.add(new Rectangle(360,150,60,30));
         obstacles.add(new Rectangle(360,180,30,60));
-
-        //Победа
-        winZone = new Rectangle(930, 420, 30, 30); // Зелёная зона победы
     }
 
+    private void initializeWinZone() {
+        winZone = new Rectangle(930, 420, 30, 30);
+    }
 
-    public boolean isCollision(Rectangle r){
-        for(Rectangle o : obstacles)
-            if(o.intersects(r)) return true;
+    public boolean isCollision(Rectangle bounds){
+        for(Rectangle obstacle : obstacles) {
+            if(obstacle.intersects(bounds)) return true;
+        }
         return false;
     }
 
-    public boolean isWin(Rectangle r){
-        return winZone.intersects(r);
+    public boolean isWin(Rectangle bounds){
+        return winZone.intersects(bounds);
+    }
+
+    public List<Rectangle> getObstacles() {
+        return new ArrayList<>(obstacles);
+    }
+
+    public Rectangle getWinZone() {
+        return new Rectangle(winZone);
     }
 }

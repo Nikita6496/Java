@@ -3,15 +3,18 @@ import java.awt.*;
 import java.awt.event.*;
 
 class GamePanel extends JPanel implements ActionListener, KeyListener {
+    private static final int ROBOT_SIZE = 30;
+    private static final int GRID_SIZE = 30;
 
-    Robot robot;
-    GameEngine engine;
-    Timer timer;
-    JLabel status;
-    JTextField stepField;
+    private Robot robot;
+    private GameEngine engine;
+    private Timer timer;
+    private JLabel statusLabel;
+    private JTextField stepField;
+    private MovementService movementService;
 
-    public GamePanel(JLabel status, JTextField stepField){
-        this.status = status;
+    public GamePanel(JLabel statusLabel, JTextField stepField){
+        this.statusLabel = statusLabel;
         this.stepField = stepField;
 
         setBackground(Color.WHITE);
@@ -21,98 +24,126 @@ class GamePanel extends JPanel implements ActionListener, KeyListener {
 
         robot = new Robot(0,0);
         engine = new GameEngine();
+        movementService = new MovementService(robot, engine, this);
 
         timer = new Timer(30, this);
         timer.start();
     }
 
-    int getStep(){
-        try { return Integer.parseInt(stepField.getText()); }
-        catch(Exception e){ return 30; }
+    public void setStatus(String status) {
+        statusLabel.setText(status);
     }
 
-    void executeCommand(String cmd){
-        status.setText("Выполняется: " + cmd);
-        int step = getStep();
-
-        if(cmd.equals("ВЛЕВО")) robot.rotateLeft();
-        if(cmd.equals("ВПРАВО")) robot.rotateRight();
-        if(cmd.equals("ПРЯМО")){
-            move(step);
+    int getStep(){
+        try {
+            return Integer.parseInt(stepField.getText());
         }
+        catch(Exception e){
+            return 30;
+        }
+    }
 
+    public void handleControlInput(ControlType controlType){
+        setStatus("Выполняется: " + controlTypeToString(controlType));
+        int step = getStep();
+        movementService.executeMovement(controlType, step);
         repaint();
     }
 
-    void move(int step){
-        Point next = robot.nextStep(step);
-        Rectangle r = new Rectangle(next.x, next.y, 30, 30);
-
-        if(engine.isCollision(r) || next.x < 0 || next.y < 0 || next.x+30 > getWidth() || next.y+30 > getHeight()){
-            status.setText("Столкновение!");
-            return;
-        }
-
-        robot.applyMove(next);
-        status.setText("ОК");
-
-        if(engine.isWin(r)){
-            fireLevelComplete();
+    private String controlTypeToString(ControlType controlType) {
+        switch(controlType) {
+            case LEFT: return "ВЛЕВО";
+            case RIGHT: return "ВПРАВО";
+            case FORWARD: return "ПРЯМО";
+            default: return "";
         }
     }
 
-    //Пользовательское событие
-    private void fireLevelComplete(){
+    void fireLevelComplete(){
         LevelCompletedEvent ev = new LevelCompletedEvent(this);
         JOptionPane.showMessageDialog(this, "Уровень пройден!");
 
-        int res = JOptionPane.showConfirmDialog(this, "Перезапустить игру?", "Победа!", JOptionPane.YES_NO_OPTION);
-        if(res == JOptionPane.YES_OPTION){
-            robot.x = 0;
-            robot.y = 0;
-            robot.dir = 0;
-            status.setText("Новая игра!");
+        int result = JOptionPane.showConfirmDialog(this, "Перезапустить игру?", "Победа!", JOptionPane.YES_NO_OPTION);
+        if(result == JOptionPane.YES_OPTION){
+            robot.resetPosition();
+            setStatus("Новая игра!");
         }
     }
 
-    //Рендеринг
     @Override
     protected void paintComponent(Graphics g){
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D)g;
 
-        for(int x=0;x<getWidth();x+=30) g2.drawLine(x,0,x,getHeight());
-        for(int y=0;y<getHeight();y+=30) g2.drawLine(0,y,getWidth(),y);
+        drawGrid(g2);
+        drawObstacles(g2);
+        drawWinZone(g2);
+        drawRobot(g2);
+    }
 
+    private void drawGrid(Graphics2D g2) {
+        for(int x = 0; x < getWidth(); x += GRID_SIZE) {
+            g2.drawLine(x, 0, x, getHeight());
+        }
+        for(int y = 0; y < getHeight(); y += GRID_SIZE) {
+            g2.drawLine(0, y, getWidth(), y);
+        }
+    }
+
+    private void drawObstacles(Graphics2D g2) {
         g2.setColor(Color.DARK_GRAY);
-        for(Rectangle b: engine.obstacles) g2.fill(b);
+        for(Rectangle obstacle : engine.getObstacles()) {
+            g2.fill(obstacle);
+        }
+    }
 
+    private void drawWinZone(Graphics2D g2) {
         g2.setColor(Color.GREEN);
-        g2.fill(engine.winZone);
+        g2.fill(engine.getWinZone());
+    }
 
+    private void drawRobot(Graphics2D g2) {
         g2.setColor(Color.BLUE);
-        g2.fillRect(robot.x,robot.y,30,30);
+        g2.fillRect(robot.getX(), robot.getY(), ROBOT_SIZE, ROBOT_SIZE);
 
         g2.setColor(Color.WHITE);
-        String arrow = "^";
-        if(robot.dir==1) arrow=">";
-        if(robot.dir==2) arrow="v";
-        if(robot.dir==3) arrow="<";
-        g2.drawString(arrow, robot.x+11, robot.y+20);
+        String directionSymbol = getDirectionSymbol();
+        g2.drawString(directionSymbol, robot.getX() + 11, robot.getY() + 20);
     }
 
-    //Таймер
-    @Override public void actionPerformed(ActionEvent e){ repaint(); }
+    private String getDirectionSymbol() {
+        switch(robot.getDirection()) {
+            case Robot.DIRECTION_UP: return "^";
+            case Robot.DIRECTION_RIGHT: return ">";
+            case Robot.DIRECTION_DOWN: return "v";
+            case Robot.DIRECTION_LEFT: return "<";
+            default: return "^";
+        }
+    }
 
-    //КЛАВИАТУРА
     @Override
-    public void keyPressed(KeyEvent e){
-        int step = getStep();
-        if(e.getKeyCode()==KeyEvent.VK_LEFT) robot.rotateLeft();
-        if(e.getKeyCode()==KeyEvent.VK_RIGHT) robot.rotateRight();
-        if(e.getKeyCode()==KeyEvent.VK_UP) move(step);
+    public void actionPerformed(ActionEvent e){
         repaint();
     }
-    @Override public void keyReleased(KeyEvent e){}
-    @Override public void keyTyped(KeyEvent e){}
+
+    @Override
+    public void keyPressed(KeyEvent e){
+        switch(e.getKeyCode()) {
+            case KeyEvent.VK_LEFT:
+                handleControlInput(ControlType.LEFT);
+                break;
+            case KeyEvent.VK_RIGHT:
+                handleControlInput(ControlType.RIGHT);
+                break;
+            case KeyEvent.VK_UP:
+                handleControlInput(ControlType.FORWARD);
+                break;
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e){}
+
+    @Override
+    public void keyTyped(KeyEvent e){}
 }

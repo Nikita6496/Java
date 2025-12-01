@@ -10,34 +10,34 @@ public class UI {
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.setSize(1050,600);
 
-        JPanel top = new JPanel();
-        JButton fwd = new JButton("Вперёд");
-        JButton left = new JButton("Влево");
-        JButton right = new JButton("Вправо");
-        JLabel status = new JLabel("Статус: готов");
+        JPanel topPanel = new JPanel();
+        JButton forwardButton = new JButton("Вперёд");
+        JButton leftButton = new JButton("Влево");
+        JButton rightButton = new JButton("Вправо");
+        JLabel statusLabel = new JLabel("Статус: готов");
 
         JTextField stepField = new JTextField("30", 4);
         stepField.setFocusable(false);
 
-        top.add(new JLabel("Шаг:"));
-        top.add(stepField);
-        top.add(fwd);
-        top.add(left);
-        top.add(right);
-        top.add(status);
+        topPanel.add(new JLabel("Шаг:"));
+        topPanel.add(stepField);
+        topPanel.add(forwardButton);
+        topPanel.add(leftButton);
+        topPanel.add(rightButton);
+        topPanel.add(statusLabel);
 
-        panel = new GamePanel(status, stepField);
+        panel = new GamePanel(statusLabel, stepField);
 
-        fwd.addActionListener(e -> panel.executeCommand("ПРЯМО"));
-        left.addActionListener(e -> panel.executeCommand("ВЛЕВО"));
-        right.addActionListener(e -> panel.executeCommand("ВПРАВО"));
+        forwardButton.addActionListener(e -> panel.handleControlInput(ControlType.FORWARD));
+        leftButton.addActionListener(e -> panel.handleControlInput(ControlType.LEFT));
+        rightButton.addActionListener(e -> panel.handleControlInput(ControlType.RIGHT));
 
-        fwd.setFocusable(false);
-        left.setFocusable(false);
-        right.setFocusable(false);
+        forwardButton.setFocusable(false);
+        leftButton.setFocusable(false);
+        rightButton.setFocusable(false);
 
         frame.setLayout(new BorderLayout());
-        frame.add(top, BorderLayout.NORTH);
+        frame.add(topPanel, BorderLayout.NORTH);
         frame.add(panel, BorderLayout.CENTER);
         frame.setVisible(true);
         panel.requestFocusInWindow();
