@@ -1,6 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.time.Instant;
 
 class GamePanel extends JPanel implements ActionListener, KeyListener {
     private static final int ROBOT_SIZE = 30;
@@ -12,6 +13,9 @@ class GamePanel extends JPanel implements ActionListener, KeyListener {
     private JLabel statusLabel;
     private JTextField stepField;
     private MovementService movementService;
+    private int stepsCount = 0;
+    private Instant levelStartTime;
+    private static final String LEVEL_NAME = "Лабиринт";
 
     public GamePanel(JLabel statusLabel, JTextField stepField){
         this.statusLabel = statusLabel;
@@ -25,6 +29,7 @@ class GamePanel extends JPanel implements ActionListener, KeyListener {
         robot = new Robot(0,0);
         engine = new GameEngine();
         movementService = new MovementService(robot, engine, this);
+        levelStartTime = Instant.now();
 
         timer = new Timer(30, this);
         timer.start();
@@ -46,6 +51,9 @@ class GamePanel extends JPanel implements ActionListener, KeyListener {
     public void handleControlInput(ControlType controlType){
         setStatus("Выполняется: " + controlTypeToString(controlType));
         int step = getStep();
+        if (controlType == ControlType.FORWARD) {
+            stepsCount++; // Увеличиваем счетчик шагов только при движении вперед
+        }
         movementService.executeMovement(controlType, step);
         repaint();
     }
@@ -63,11 +71,30 @@ class GamePanel extends JPanel implements ActionListener, KeyListener {
         LevelCompletedEvent ev = new LevelCompletedEvent(this);
         JOptionPane.showMessageDialog(this, "Уровень пройден!");
 
+        long completionTime = Instant.now().toEpochMilli() - levelStartTime.toEpochMilli();
+
+        GameStatsRepository.addGameStat(LEVEL_NAME, completionTime, stepsCount);
+
+
+
+        JOptionPane.showMessageDialog(this,
+                String.format("Уровень пройден! Шагов: %d Время: %.1f сек.",
+                        stepsCount, completionTime / 1000.0));
+
         int result = JOptionPane.showConfirmDialog(this, "Перезапустить игру?", "Победа!", JOptionPane.YES_NO_OPTION);
         if(result == JOptionPane.YES_OPTION){
             robot.resetPosition();
+            resetGame();
             setStatus("Новая игра!");
         }
+    }
+
+    private void resetGame() {
+        robot.resetPosition();
+        stepsCount = 0;
+        levelStartTime = Instant.now();
+        setStatus("Новая игра!");
+        repaint();
     }
 
     @Override
